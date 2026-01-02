@@ -1,2 +1,3 @@
-# ACL_2026
-Anonymous repo submitted to ACL 2026
+# SCD-MMPSR: Semi-Supervised Cross-Domain Learning Framework for Multitask Multimodal Psychological States Recognition
+
+*Submitted to ACL 2026*

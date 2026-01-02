@@ -1,0 +1,160 @@
+[general]
+# for the bot create a .env file and install
+# pip install python-dotenv
+# inside the file specify the TG token and your chat ID (how to create a bot and get your chat ID - google it)
+use_telegram = true # Telegram notifications (you’ll need to provide your tokens)
+
+# ---------------------------
+# Dataset settings
+# ---------------------------
+
+[datasets.cmu_mosei]
+base_dir = "E:/CMU-MOSEI/"
+csv_path = "{base_dir}/{split}_full_with_description.csv"
+video_dir  = "{base_dir}/video/{split}/"
+audio_dir = "{base_dir}/audio/{split}/"
+# Percentage of data to use; if train=0 → dataset will be skipped
+train_fraction = 1.00
+test_fraction  = 1.00
+dev_fraction   = 1.00
+# fraction = 0.5 # Will take the same percentage for all splits
+
+[datasets.fiv2]
+base_dir = "E:/FirstImpressionsV2/"
+csv_path = "{base_dir}/{split}_full_with_description.csv"
+video_dir  = "{base_dir}/video/{split}/"
+audio_dir = "{base_dir}/audio/{split}/"
+train_fraction = 1.00
+test_fraction  = 1.00
+dev_fraction   = 1.00
+
+[datasets.bah]
+base_dir = "E:/BAH_DB/"
+csv_path = "{base_dir}/{split}_full_with_description.csv"
+video_dir  = "{base_dir}/video/{split}/"
+audio_dir = "{base_dir}/audio/{split}/"
+train_fraction = 1.00
+test_fraction  = 1.00
+dev_fraction   = 1.00
+
+# ---------------------------
+# DataLoader parameters
+# ---------------------------
+[dataloader]
+num_workers = 0
+shuffle = true
+prepare_only = false      # only feature extraction, no training
+text_description_column = "text_llm"    # "text_llm" or "sum_bart-large-cnn"
+
+# ---------------------------
+# General training parameters
+# ---------------------------
+[train.general]
+random_seed = 42                  # fix random seed for reproducibility (0 = different each run)
+subset_size = 0                   # limit number of examples (0 = use full dataset)
+batch_size = 32                   # batch size
+num_epochs = 100                  # number of training epochs
+max_patience = 15                 # max epochs without improvements (for Early Stopping)
+save_best_model = true            # save the best model
+save_prepared_data = true         # save extracted features (embeddings)
+save_feature_path = './features/' # path to save embeddings
+search_type = "exhaustive"        # search strategy: "greedy", "exhaustive" or "none"
+checkpoint_dir = "checkpoints"
+device = "cuda"                   # "cuda" or "cpu", where to load the model
+selection_metric = "mean_all"     # metric for monitoring: "mean_emo", "mF1", "mUAR", "ACC", "mean_combo"
+
+# ---------------------------
+# Model parameters
+# ---------------------------
+[train.model]
+model_name            = "MultiModalFusionModel_v2" # model name
+per_activation        = "relu"   # or "sigmoid"
+hidden_dim            = 512      # hidden state size
+num_transformer_heads = 8        # number of attention heads in transformer
+positional_encoding   = false    # whether to use positional encoding
+dropout               = 0.15     # dropout between layers
+out_features          = 512      # size of final features before classification
+
+# ---------------------------
+# Loss parameters
+# ---------------------------
+[train.losses]
+weight_emotion           = 1.0      # adjust emotion loss (0.1 with class weighting, 1.0 without)
+weight_pers              = 1.0      # adjust personality loss
+weight_ah                = 1.0      # adjust ah loss
+ssl_weight_emotion       = 1.0
+ssl_weight_personality   = 0.2
+ssl_weight_ah            = 0.6
+ssl_confidence_threshold_emo_ah = 0.60
+ssl_confidence_threshold_pt = 0.60
+pers_loss_type        = 'mae'    # options: ccc, mae, mse, rmse_bell, rmse_logcosh, RMGL
+emotion_loss_type     = 'CE'
+flag_emo_weight       = false     # use weights for emotional class imbalance
+alpha_sup = 1.25
+w_lr_sup = 0.01
+alpha_ssl = 1.0
+w_lr_ssl = 0.005
+lambda_ssl= 0.3
+w_floor = 1e-3
+
+# ---------------------------
+# Optimizer parameters
+# ---------------------------
+[train.optimizer]
+optimizer = "adam"        # optimizer type: "adam", "adamw", "lion", "sgd", "rmsprop"
+lr = 1e-4                 # initial learning rate
+weight_decay = 1e-5       # weight decay for regularization
+momentum = 0.9            # momentum (used only in SGD)
+
+# ---------------------------
+# Scheduler parameters
+# ---------------------------
+[train.scheduler]
+scheduler_type = "plateau" # scheduler type: "none", "plateau", "cosine", "onecycle" or HuggingFace-style ("huggingface_linear", "huggingface_cosine", "huggingface_cosine_with_restarts", etc.)
+warmup_ratio = 0.1         # ratio of warmup iterations to total steps (0.1 = 10%)
+
+[embeddings]
+average_features = "mean_std" # Feature averaging: "mean" | "mean_std" | "raw"
+emb_normalize = false
+
+video_extractor    = "openai/clip-vit-base-patch32" # "openai/clip-vit-base-patch32" | "off"
+counter_need_frames = 30  # how many frames to select from all available, evenly spaced
+image_size = 224          # width and height of image
+face_detector = "mp_fd"   # "mp_fd" | "mp_hybrid" | "yolo"
+face_relative_threshold = 0.3
+average_multi_face = true
+
+# ---------------------------
+# Available audio extractors
+# ---------------------------
+#audio_extractor = "off"
+#audio_extractor = "laion/clap-htsat-fused"  # ClapAudioExtractor
+#audio_extractor = "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim"  # Wav2Vec2MSP
+# ---------------------------
+audio_extractor = "laion/clap-htsat-fused"
+
+# ---------------------------
+# Available text/behavior extractors
+# ---------------------------
+# "openai/clip-vit-base-patch32"
+# "laion/clap-htsat-fused"
+# "michellejieli/emotion_text_classifier" - https://huggingface.co/michellejieli/emotion_text_classifier
+# "FacebookAI/xlm-roberta-large"
+# "off"
+# ---------------------------
+text_extractor     = "michellejieli/emotion_text_classifier"
+behavior_extractor = "michellejieli/emotion_text_classifier"
+
+[cache]
+per_modality_cache = true
+overwrite_modality_cache = false
+force_reextract = []      # e.g. ["audio", "face"] to force only them
+preprocess_version = "v1" # bump version if get_metadata/preprocessing changes
+
+[ablation]
+use_graph = true              # false => without Graph Layer
+use_attention = true          # false => without Attention Layer
+use_guidebank = true          # false => without Guide Bank
+use_task_projectors = true    # false => without Task Projectors
+disabled_modalities = []      # e.g. ["audio","text","face", "behavior"]
+active_tasks = ["emotion", "personality","ah"]  # drop any of ["emotion", "personality","ah"]
